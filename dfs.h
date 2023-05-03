@@ -25,6 +25,7 @@ class dfsImpl {
   virtual bool find() const = 0;
   virtual void putIn(int deep, int i) = 0;
   virtual void moveOut(int deep, int i) = 0;
+  virtual ~dfsImpl(){}
 };
 
 void dfs_once(int deep, dfsImpl &impl);
@@ -33,6 +34,7 @@ void dfs_all(int deep, dfsImpl &impl);
 class puzzle : public dfsImpl {
  public:
   explicit puzzle(Matrix9i &mat);
+  ~puzzle(){}
   int merge(int r, int c) const;
   void setLimit(int l) { limit = l; }
   int getCount() const { return cnt; }
@@ -58,7 +60,7 @@ class puzzle : public dfsImpl {
 class by_col : public dfsImpl {
  public:
   explicit by_col(Vector9i &vec);
-  bool modified();
+  ~by_col();
 
   void getPos(int &deep) const override;
   void success() override;
@@ -78,7 +80,7 @@ class by_col : public dfsImpl {
 class col_block : public dfsImpl {
  public:
   explicit col_block(Vector9i &vec);
-  bool modified();
+  ~col_block();
 
   void getPos(int &deep) const override;
   void success() override;

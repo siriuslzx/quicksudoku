@@ -263,7 +263,7 @@ bool col_single(int &x, int &y, int &num, const Matrix9i &mat) {
           if(getBit(n, k+kDet)) {
             setBit(stats[k],i);
           }
-		}
+		    }
       }
     }
     for(int k = 1; k < 10; ++k) {
@@ -375,9 +375,11 @@ bool col_circle_remove(Matrix9i &mat) {
 
   for (int i = 0; i < 9; i++) {
     Vector9i col = mat.col(i);
-    by_col bc(col);
-    dfs_all(0, bc);
-    if (bc.modified()) {
+    {
+      by_col bc(col);
+      dfs_all(0, bc);
+    }
+    if (mat.col(i) != col) {
       modify = true;
       mat.col(i) = col;
     }
@@ -410,9 +412,11 @@ bool sudoku::assumeRemove() {
   Matrix9i mat = col_swap_num(_mat);
   for (int i = 0; i < 9; i++) {
     Vector9i col = mat.col(i);
-    col_block cb(col);
-    dfs_all(0, cb);
-    if (cb.modified()) {
+    {
+      col_block cb(col);
+      dfs_all(0, cb);
+    }
+    if (mat.col(i) != col) {
       modify = true;
       mat.col(i) = col;
     }

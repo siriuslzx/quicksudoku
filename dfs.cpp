@@ -113,12 +113,10 @@ by_col::by_col(Vector9i &vec) : _vec(vec) {
   }
 }
 
-bool by_col::modified() {
+by_col::~by_col() {
   if (all_ans != _vec) {
     _vec = all_ans;
-    return true;
   }
-  return false;
 }
 
 void by_col::getPos(int &deep) const {
@@ -165,12 +163,10 @@ col_block::col_block(Vector9i &vec) : _vec(vec) {
   }
 }
 
-bool col_block::modified() {
+col_block::~col_block() {
   if (all_ans != _vec) {
     _vec = all_ans;
-    return true;
   }
-  return false;
 }
 
 void col_block::getPos(int &deep) const {
