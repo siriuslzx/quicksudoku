@@ -6,9 +6,9 @@ int main() {
   int num;
   sudoku game;
   game.newGame();
-  for (int y = 0; y < 9; y++) {
-    for (int x = 0; x < 9; x++) {
-      if (game.getNum(x, y, num)) {
+  for (int i = 0; i < 9; i++) {
+    for (int j = 0; j < 9; j++) {
+      if (game.getNum(i, j, num)) {
         std::cout << num;
       } else {
         std::cout << 0;

@@ -20,14 +20,16 @@ class sudoku {
   ~sudoku();
 
   void newGame();
-  bool getNum(int x, int y, int &num) const;
-  void setNum(int x, int y, int num);
-  void flipNote(int x, int y, int num);
+  bool getNum(int r, int c, int &num) const;
+  void setNum(int r, int c, int num);
+  void flipNote(int r, int c, int num);
 
-  bool getSingle(int &x, int &y, int &num) const;
+  bool getSingle(int &r, int &c, int &num) const;
   bool lineRemove();
   bool circleRemove();
   bool assumeRemove();
+
+  int diff;
 
  private:
   int _diff;

@@ -25,7 +25,7 @@ class dfsImpl {
   virtual bool find() const = 0;
   virtual void putIn(int deep, int i) = 0;
   virtual void moveOut(int deep, int i) = 0;
-  virtual ~dfsImpl(){}
+  virtual ~dfsImpl() {}
 };
 
 void dfs_once(int deep, dfsImpl &impl);
@@ -34,7 +34,7 @@ void dfs_all(int deep, dfsImpl &impl);
 class puzzle : public dfsImpl {
  public:
   explicit puzzle(Matrix9i &mat);
-  ~puzzle(){}
+  ~puzzle() {}
   int merge(int r, int c) const;
   void setLimit(int l) { limit = l; }
   int getCount() const { return cnt; }

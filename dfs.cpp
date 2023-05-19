@@ -137,14 +137,14 @@ bool by_col::valid(int deep, int i) const { return getBit(_vec(deep), i + kDet) 
 bool by_col::find() const { return false; }
 
 void by_col::putIn(int deep, int i) {
-  int n = (_vec(deep) >> 4) << 4;
+  int n = (_vec(deep) >> kDet) << kDet;
   _vec(deep) = n + i;
   used[i] = true;
 }
 
 void by_col::moveOut(int deep, int i) {
   used[i] = false;
-  int n = (_vec(deep) >> 4) << 4;
+  int n = (_vec(deep) >> kDet) << kDet;
   _vec(deep) = n + kNum;
 }
 
@@ -190,7 +190,7 @@ bool col_block::valid(int deep, int i) const {
 bool col_block::find() const { return false; }
 
 void col_block::putIn(int deep, int i) {
-  int n = (_vec(deep) >> 4) << 4;
+  int n = (_vec(deep) >> kDet) << kDet;
   _vec(deep) = n + i;
   int j = i - 1;
   col_used[j] = true;
@@ -202,6 +202,6 @@ void col_block::moveOut(int deep, int i) {
   block_used[deep / 3 * 3 + j / 3] = false;
   col_used[j] = false;
 
-  int n = (_vec(deep) >> 4) << 4;
+  int n = (_vec(deep) >> kDet) << kDet;
   _vec(deep) = n + kNum;
 }

@@ -18,7 +18,7 @@ using Matrix9i = Eigen::Matrix<int, 9, 9>;
 using Vector9i = Eigen::Matrix<int, 9, 1>;
 
 const int kDet = 4;
-const int kNotes = 0b111'111'111'0;
+const int kNotes = 0b1111111110;
 const int kNum = 0b1111;
 
 inline bool getBit(int n, int idx) { return (n >> idx) & 1; }
