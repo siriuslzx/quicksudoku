@@ -16,13 +16,10 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
-#include <queue>
 #include <tuple>
 #include <vector>
 
 #include "dfs.h"
-
-using queue_t = std::queue<std::tuple<int, int, int>>;
 
 bool singleBit(int n) { return n > 0 && (n & (n - 1)) == 0; }
 
@@ -92,121 +89,6 @@ void initNote(Matrix9i &mat) {
     }
 }
 
-void col_single(queue_t &q, const Matrix9i &mat, void (*fun)(int &, int &) = nullptr) {
-  int stats[10];
-  for (int j = 0; j < 9; ++j) {
-    std::fill(stats, stats + 10, 0);
-    for (int i = 0; i < 9; ++i) {
-      int n = mat(i, j);
-      if (n > 9) {
-        for (int k = 1; k < 10; ++k) {
-          if (getBit(n, k + kDet)) {
-            setBit(stats[k], i);
-          }
-        }
-      }
-    }
-    for (int k = 1; k < 10; ++k) {
-      if (singleBit(stats[k])) {
-        int c = j;
-        int r = log2(stats[k]);
-        if (fun) fun(r, c);
-        q.push({r, c, k});
-      }
-    }
-  }
-}
-bool refreshSingle(queue_t &q, const Matrix9i &mat) {
-  queue_t{}.swap(q);
-
-  col_single(q, mat);
-  col_single(q, mat.transpose(), std::swap<int>);
-  col_single(q, col_trans_block(mat), col_swap_block);
-
-  for (int i = 0; i < 9; ++i) {
-    for (int j = 0; j < 9; ++j) {
-      int n = mat(i, j);
-      int notes = n >> kDet;
-      if (singleBit(notes)) {
-        q.push({i, j, static_cast<int>(log2(notes))});
-      }
-    }
-  }
-  return !q.empty();
-}
-int fillAllSingle(Matrix9i &mat) {
-  queue_t q;
-  if (!refreshSingle(q, mat)) return 0;
-
-  while (!q.empty() || refreshSingle(q, mat)) {
-    int r, c, num;
-    std::tie(r, c, num) = q.front();
-    q.pop();
-    if (mat(r, c) < 10) continue;
-    auto arr = mat.array() / (1 << (num + kDet));
-    Eigen::Array<int, 9, 9> cur = (arr - arr / 2 * 2);
-
-    while (true) {
-      if (!getBit(mat(r, c), num + kDet)) return -1;
-      mat(r, c) = num;
-      cur.col(c) = 0;
-      cur.row(r) = 0;
-      cur.block<3, 3>(r / 3 * 3, c / 3 * 3) = 0;
-
-      for (auto &n : mat.col(c)) {
-        unsetBit(n, num + kDet);
-        if (singleBit(n >> kDet)) {
-          int pos = &n - mat.data();
-          q.push({pos % 9, pos / 9, static_cast<int>(log2(n >> kDet))});
-        }
-        if (n == kNum) return -1;
-      }
-      for (auto &n : mat.row(r)) {
-        unsetBit(n, num + kDet);
-        if (singleBit(n >> kDet)) {
-          int pos = &n - mat.data();
-          q.push({pos % 9, pos / 9, static_cast<int>(log2(n >> kDet))});
-        }
-        if (n == kNum) return -1;
-      }
-      for (auto &n : mat.block<3, 3>(r / 3 * 3, c / 3 * 3).reshaped()) {
-        unsetBit(n, num + kDet);
-        if (singleBit(n >> kDet)) {
-          int pos = &n - mat.data();
-          q.push({pos % 9, pos / 9, static_cast<int>(log2(n >> kDet))});
-        }
-        if (n == kNum) return -1;
-      }
-
-      if ((cur.colwise().sum() != 1).all() && (cur.rowwise().sum() != 1).all()) {
-        break;
-      }
-
-      Eigen::Index maxIndex;
-      for (int j = 0; j < 9; j++) {
-        auto col = cur.col(j);
-        if (col.sum() == 1) {
-          col.maxCoeff(&maxIndex);
-          c = j;
-          r = maxIndex;
-          goto next_step;
-        }
-      }
-      for (int i = 0; i < 9; i++) {
-        auto row = cur.row(i);
-        if (row.sum() == 1) {
-          row.maxCoeff(&maxIndex);
-          c = maxIndex;
-          r = i;
-          goto next_step;
-        }
-      }
-    next_step:;
-    }
-  }
-  return 1;
-}
-
 sudoku::sudoku() {
   srand(time(0));
   diff = 1;
@@ -258,6 +140,7 @@ void sudoku::newGame() {
   for (size_t i = 0; i < pool.size(); i++) pool[i] = i;
   int times = 30;
   int limit = pool.size();
+  int r, c, num;
 
   _mat.fill(0);
   for (int i = 0; i < times; i++) {
@@ -265,17 +148,16 @@ void sudoku::newGame() {
     int pos = pool[n];
     std::swap(pool[n], pool[--limit]);
 
-    int r = pos / 9;
-    int c = pos % 9;
+    r = pos / 9;
+    c = pos % 9;
     _mat(r, c) = _ans(r, c);
     samp.push_back({r, c, 1, rand()});
   }
   initNote(_mat);
 
   std::vector<helper> vec;
-  int num;
   while (_mat.maxCoeff() > 9) {
-    fillAllSingle(_mat);
+    while (getSingle(r, c, num)) setNum(r, c, num);
 
     if (filter_notes(_mat, vec)) {
       auto it = max_element(vec.begin(), vec.end());
@@ -300,7 +182,6 @@ void sudoku::newGame() {
         _mat(cur_r, cur_c) = 0;
         initNote(_mat);
 
-        int r, c, num;
         _diff = 1;
         samp[i].DIFF = -1;
         while (getSingle(r, c, num) || lineRemove() || circleRemove() || assumeRemove()) {
@@ -315,7 +196,7 @@ void sudoku::newGame() {
         }
         if (samp[i].DIFF == -1) {
           int notes = _mat(cur_r, cur_c) >> kDet;
-          samp[i].DIFF = 9;
+          samp[i].DIFF = 5;
           for (int j = 1; j < 10; ++j)
             if (getBit(notes, j) && j != _ans(cur_r, cur_c)) {
               Matrix9i mat = _mat;
