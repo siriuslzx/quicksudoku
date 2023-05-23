@@ -4,13 +4,16 @@ LD = g++
 Eigen3_DIR = /usr/include/eigen3
 CXXFLAGS =  -Wall -O2 -std=c++11 -I$(Eigen3_DIR)
 
-OBJ = example.o sudoku.o dfs.o
+OBJ = sudoku.o dfs.o
 
-all: release
+all: release test
 
-release: $(OBJ)
-	$(LD) -o quickSudoku $(OBJ)
+release: example.o $(OBJ)
+	$(LD) -o quickSudoku $^
+
+test: test_speed.o $(OBJ)
+	$(LD) -o $@ $^
 
 .PHONY : clean
 clean :
-	rm -f $(OBJ) quickSudoku
+	rm -f *.o quickSudoku test

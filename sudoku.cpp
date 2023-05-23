@@ -59,7 +59,7 @@ Matrix9i col_trans_block(const Matrix9i &mat) {
   return res;
 }
 
-Matrix9i col_swap_num(const Matrix9i &mat) {
+Matrix9i col_trans_num(const Matrix9i &mat) {
   Matrix9i res;
   res.fill(kNum);
   for (int i = 0; i < 9; i++) {
@@ -87,6 +87,112 @@ void initNote(Matrix9i &mat) {
         mat(i, j) = (pu.merge(i, j) << kDet) + kNum;
       }
     }
+}
+bool col_single(int &r, int &c, int &num, const Matrix9i &mat, void (*fun)(int &, int &) = nullptr) {
+  int stats[10];
+  for (int j = 0; j < 9; ++j) {
+    std::fill(stats, stats + 10, 0);
+    for (int i = 0; i < 9; ++i) {
+      int n = mat(i, j);
+      if (n > 9) {
+        for (int k = 1; k < 10; ++k) {
+          if (getBit(n, k + kDet)) {
+            setBit(stats[k], i);
+          }
+        }
+      }
+    }
+    for (int k = 1; k < 10; ++k) {
+      if (singleBit(stats[k])) {
+        r = log2(stats[k]);
+        c = j;
+        num = k;
+        if (fun) fun(r, c);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool get_single(int &r, int &c, int &num, const Matrix9i &mat) {
+  if (col_single(r, c, num, col_trans_block(mat), col_swap_block) || col_single(r, c, num, mat) ||
+      col_single(r, c, num, mat.transpose(), std::swap<int>)) {
+    return true;
+  }
+
+  for (int i = 0; i < 9; ++i) {
+    for (int j = 0; j < 9; ++j) {
+      int n = mat(i, j);
+      int notes = n >> kDet;
+      if (singleBit(notes)) {
+        r = i;
+        c = j;
+        num = log2(notes);
+        return true;
+      }
+    }
+  }
+  num = 0;
+  return false;
+}
+
+void set_num(int r, int c, int num, Matrix9i &mat) {
+  mat(r, c) = num;
+  for (auto &n : mat.col(c)) {
+    unsetBit(n, num + kDet);
+  }
+  for (auto &n : mat.row(r)) {
+    unsetBit(n, num + kDet);
+  }
+  for (auto &n : mat.block<3, 3>(r / 3 * 3, c / 3 * 3).reshaped()) {
+    unsetBit(n, num + kDet);
+  }
+}
+
+int fillAllSingle(Matrix9i &mat) {
+  int r, c, num;
+  if (!get_single(r, c, num, mat)) return 0;
+
+  do {
+    auto arr = mat.array() / (1 << (num + kDet));
+    Eigen::Array<int, 9, 9> cur = (arr - arr / 2 * 2);
+    while (true) {
+      set_num(r, c, num, mat);
+      cur.col(c) = 0;
+      cur.row(r) = 0;
+      cur.block<3, 3>(r / 3 * 3, c / 3 * 3) = 0;
+
+      Eigen::Index maxIndex;
+      for (int j = 0; j < 9; j++) {
+        auto col = cur.col(j);
+        if (col.sum() == 1) {
+          col.maxCoeff(&maxIndex);
+          c = j;
+          r = maxIndex;
+          goto next_step;
+        }
+      }
+      for (int i = 0; i < 9; i++) {
+        auto row = cur.row(i);
+        if (row.sum() == 1) {
+          row.maxCoeff(&maxIndex);
+          c = maxIndex;
+          r = i;
+          goto next_step;
+        }
+      }
+      break;
+    next_step: {}
+    }
+    cur += (mat.array() == num).cast<int>();
+    Eigen::Array<int, 9, 9> blk = col_trans_block(cur.matrix()).array();
+    if ((cur.colwise().sum() == 0).any() || (cur.rowwise().sum() == 0).any() || (blk.colwise().sum() == 0).any()) {
+      return -1;
+    }
+  } while (get_single(r, c, num, mat));
+
+  return 1;
 }
 
 sudoku::sudoku() {
@@ -120,14 +226,40 @@ bool filter_notes(const Matrix9i &mat, std::vector<helper> &vec) {
   return !vec.empty();
 }
 
+bool isFind;
+void dfs_logic(Matrix9i &mat) {
+  if (fillAllSingle(mat) < 0) {
+    isFind = false;
+    return;
+  }
+  if (mat.maxCoeff() <= 9) {
+    isFind = true;
+    return;
+  }
+
+  Matrix9i bak = mat;
+  int deep = 0;
+  for (; deep < 81 && mat(deep / 9, deep % 9) < 10; deep++) {
+  }
+  int r = deep / 9, c = deep % 9;
+  for (int i = 1; i < 10; i++)
+    if (getBit(mat(r, c), i + kDet)) {
+      set_num(r, c, i, mat);
+      dfs_logic(mat);
+      if (isFind) return;
+      mat = bak;
+    }
+}
+
 void sudoku::newGame() {
   _ans.fill(0);
   int a[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  int r, c, num;
   for (int i = 0; i < 9; i += 3) {
     shuffle(a, 9);
     for (int j = 0; j < 9; j++) {
-      int r = i + j / 3;
-      int c = i + j % 3;
+      r = i + j / 3;
+      c = i + j % 3;
       _ans(r, c) = a[j];
     }
   }
@@ -140,7 +272,6 @@ void sudoku::newGame() {
   for (size_t i = 0; i < pool.size(); i++) pool[i] = i;
   int times = 30;
   int limit = pool.size();
-  int r, c, num;
 
   _mat.fill(0);
   for (int i = 0; i < times; i++) {
@@ -151,7 +282,7 @@ void sudoku::newGame() {
     r = pos / 9;
     c = pos % 9;
     _mat(r, c) = _ans(r, c);
-    samp.push_back({r, c, 1, rand()});
+    samp.push_back({r, c, 1});
   }
   initNote(_mat);
 
@@ -163,67 +294,54 @@ void sudoku::newGame() {
       auto it = max_element(vec.begin(), vec.end());
       num = _ans(it->r, it->c);
       setNum(it->r, it->c, num);
-      samp.push_back({it->r, it->c, 1, rand()});
+      samp.push_back({it->r, it->c, 1});
     }
   }
   // end easy */
   diff = 1;
   // create hard
-  while (true) {
-#define DIFF w
-    for (int i = samp.size() - 1; i >= 0; i--)
-      if (samp[i].DIFF > 0) {
-        _mat.fill(0);
-        for (auto &ele : samp) {
-          _mat(ele.r, ele.c) = _ans(ele.r, ele.c);
-        }
-        int cur_r = samp[i].r;
-        int cur_c = samp[i].c;
-        _mat(cur_r, cur_c) = 0;
-        initNote(_mat);
+  for (int i = samp.size() - 1; i >= 0; i--) {
+    _mat.fill(0);
+    for (auto &ele : samp) {
+      _mat(ele.r, ele.c) = _ans(ele.r, ele.c);
+    }
+    int cur_r = samp[i].r;
+    int cur_c = samp[i].c;
+    _mat(cur_r, cur_c) = 0;
+    initNote(_mat);
 
-        _diff = 1;
-        samp[i].DIFF = -1;
-        while (getSingle(r, c, num) || lineRemove() || circleRemove() || assumeRemove()) {
-          if (num) {
-            if (cur_r == r && cur_c == c) {
-              samp[i].DIFF = _diff;
-              samp[i].hash = rand();
-              break;
-            }
-            setNum(r, c, num);
-          }
-        }
-        if (samp[i].DIFF == -1) {
-          int notes = _mat(cur_r, cur_c) >> kDet;
-          samp[i].DIFF = 5;
-          for (int j = 1; j < 10; ++j)
-            if (getBit(notes, j) && j != _ans(cur_r, cur_c)) {
-              Matrix9i mat = _mat;
-              mat(cur_r, cur_c) = j;
-              puzzle pu(mat);
-              dfs_once(0, pu);
-              if (pu.find()) {
-                samp[i].DIFF = -1;
-                break;
-              }
-            }
+    int notes = _mat(cur_r, cur_c) >> kDet;
+    for (int j = 1; j < 10; ++j)
+      if (getBit(notes, j) && j != _ans(cur_r, cur_c)) {
+        Matrix9i mat = _mat;
+        set_num(cur_r, cur_c, j, mat);
+        isFind = false;
+        dfs_logic(mat);
+        if (isFind) {
+          samp[i].w = -1;
+          break;
         }
       }
-
-    auto it = std::max_element(samp.begin(), samp.end());
-    if (it->DIFF < 0) break;
-    diff = std::max(diff, it->DIFF);
-    samp.erase(it);
-#undef DIFF
+    if (samp[i].w > 0) {
+      samp.erase(samp.begin() + i);
+    }
   }
   // end hard */
-
   _mat.fill(0);
   for (auto ele : samp) {
     _mat(ele.r, ele.c) = _ans(ele.r, ele.c);
   }
   initNote(_mat);
+
+  Matrix9i bak = _mat;
+  _diff = 1;
+  while (getSingle(r, c, num) || lineRemove() || circleRemove() || assumeRemove()) {
+    if (num) {
+      setNum(r, c, num);
+    }
+  }
+  diff = (_mat.maxCoeff() > 9) ? 5 : _diff;
+  _mat = bak;
 }
 
 bool sudoku::getNum(int r, int c, int &num) const {
@@ -239,16 +357,7 @@ bool sudoku::getNum(int r, int c, int &num) const {
 
 void sudoku::setNum(int r, int c, int num) {
   if (_mat(r, c) > 9) {
-    _mat(r, c) = num;
-    for (auto &n : _mat.col(c)) {
-      unsetBit(n, num + kDet);
-    }
-    for (auto &n : _mat.row(r)) {
-      unsetBit(n, num + kDet);
-    }
-    for (auto &n : _mat.block<3, 3>(r / 3 * 3, c / 3 * 3).reshaped()) {
-      unsetBit(n, num + kDet);
-    }
+    set_num(r, c, num, _mat);
   } else {
     _mat(r, c) = 0;
     initNote(_mat);
@@ -262,57 +371,10 @@ void sudoku::flipNote(int r, int c, int num) {
   }
 }
 
-bool col_single(int &r, int &c, int &num, const Matrix9i &mat, void (*fun)(int &, int &) = nullptr) {
-  int stats[10];
-  for (int j = 0; j < 9; ++j) {
-    std::fill(stats, stats + 10, 0);
-    for (int i = 0; i < 9; ++i) {
-      int n = mat(i, j);
-      if (n > 9) {
-        for (int k = 1; k < 10; ++k) {
-          if (getBit(n, k + kDet)) {
-            setBit(stats[k], i);
-          }
-        }
-      }
-    }
-    for (int k = 1; k < 10; ++k) {
-      if (singleBit(stats[k])) {
-        r = log2(stats[k]);
-        c = j;
-        num = k;
-        if (fun) fun(r, c);
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-bool sudoku::getSingle(int &r, int &c, int &num) const {
-  if (col_single(r, c, num, _mat) || col_single(r, c, num, _mat.transpose(), std::swap<int>) ||
-      col_single(r, c, num, col_trans_block(_mat), col_swap_block)) {
-    return true;
-  }
-
-  for (int i = 0; i < 9; ++i) {
-    for (int j = 0; j < 9; ++j) {
-      int n = _mat(i, j);
-      int notes = n >> kDet;
-      if (singleBit(notes)) {
-        r = i;
-        c = j;
-        num = log2(notes);
-        return true;
-      }
-    }
-  }
-  num = 0;
-  return false;
-}
+bool sudoku::getSingle(int &r, int &c, int &num) const { return get_single(r, c, num, _mat); }
 
 bool exist3x1(const Matrix9i &mat, int block_r, int block_c, int col_idx, int num) {
-#if EIGEN_WORLD_VERSION==3 && EIGEN_MAJOR_VERSION < 4
+#if EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION < 4
 #error "need eigen 3.4"
 #endif
   auto col = mat.block<3, 1>(block_r * 3, block_c * 3 + col_idx);
@@ -393,7 +455,7 @@ bool sudoku::circleRemove() {
 bool sudoku::assumeRemove() {
   bool modify = false;
 
-  Matrix9i mat = col_swap_num(_mat);
+  Matrix9i mat = col_trans_num(_mat);
   for (int i = 0; i < 9; i++) {
     Vector9i col = mat.col(i);
     {
@@ -405,7 +467,7 @@ bool sudoku::assumeRemove() {
       mat.col(i) = col;
     }
   }
-  _mat = col_swap_num(mat);
+  _mat = col_trans_num(mat);
 
   if (modify && _diff < 4) _diff = 4;
 
