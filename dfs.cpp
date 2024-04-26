@@ -48,8 +48,6 @@ void dfsDeduce(int R, int C, int num, const Array9i bd[], bool &isFind) {
   int r = deep / 9, c = deep % 9;
   for (int i = 1; i < 10; i++)
     if (board[i](r, c)) {
-      Array9i a_num = board[0];
-      a_num(r, c) = i;
       dfsDeduce(r, c, i, board, isFind);
       if (isFind) return;
     }
