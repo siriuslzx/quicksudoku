@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Zhongxian Li
+ * Copyright (c) 2024 Zhongxian Li
  * quick sudoku is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -14,86 +14,47 @@
 
 #include "common.h"
 
-class dfsImpl {
+namespace li {
+class DfsImpl {
  public:
   virtual void getPos(int &deep) const = 0;
-  virtual void success() = 0;
-  virtual int size() const = 0;
+  virtual bool success(int deep) const = 0;
+  virtual void findOne() = 0;
   virtual int begin() const { return 1; }
   virtual int end() const { return 10; }
-  virtual bool valid(int deep, int i) const = 0;
-  virtual bool find() const = 0;
-  virtual void putIn(int deep, int i) = 0;
-  virtual void moveOut(int deep, int i) = 0;
-  virtual ~dfsImpl() {}
+  virtual bool valid(int deep, int n) const = 0;
+  virtual void putIn(int deep, int n) = 0;
+  virtual bool finish() const = 0;
+  virtual void moveOut(int deep, int n) = 0;
+  virtual ~DfsImpl() {}
 };
 
-void dfs_once(int deep, dfsImpl &impl);
-void dfs_all(int deep, dfsImpl &impl);
+void dfsGuess(DfsImpl &impl, int deep = 0);
+void dfsDeduce(int R, int C, int num, const Array9i bd[], bool &isFind);
 
-class puzzle : public dfsImpl {
+class Puzzle : public DfsImpl {
  public:
-  explicit puzzle(Matrix9i &mat);
-  ~puzzle() {}
-  int merge(int r, int c) const;
+  explicit Puzzle(Array9i &puz);
+  ~Puzzle() {}
   void setLimit(int l) { limit = l; }
   int getCount() const { return cnt; }
 
   void getPos(int &deep) const override;
-  void success() override;
-  int size() const override { return _size; }
-  bool valid(int deep, int i) const override;
-  bool find() const override;
-  void putIn(int deep, int i) override;
-  void moveOut(int deep, int i) override;
+  bool success(int deep) const override;
+  void findOne() override;
+  bool valid(int deep, int n) const override;
+  void putIn(int deep, int n) override;
+  bool finish() const override;
+  void moveOut(int deep, int n) override;
 
  private:
-  void set(int r, int c, int n);
-  void unset(int r, int c, int n);
-  Matrix9i &_mat;
+  void mark(int r, int c, int n);
+  void unmark(int r, int c, int n);
+  Array9i &_puz;
   int cnt;
   int limit;
-  int _size = 81;
-  int col[9], row[9], blk[9];
+  const int _size = 81;
+  Array9i col, row, blk;
 };
 
-class by_col : public dfsImpl {
- public:
-  explicit by_col(Vector9i &vec);
-  ~by_col();
-
-  void getPos(int &deep) const override;
-  void success() override;
-  int size() const override { return _size; }
-  bool valid(int deep, int i) const override;
-  bool find() const override;
-  void putIn(int deep, int i) override;
-  void moveOut(int deep, int i) override;
-
- private:
-  Vector9i &_vec;
-  Vector9i all_ans;
-  int _size = 9;
-  bool used[10];
-};
-
-class col_block : public dfsImpl {
- public:
-  explicit col_block(Vector9i &vec);
-  ~col_block();
-
-  void getPos(int &deep) const override;
-  void success() override;
-  int size() const override { return _size; }
-  bool valid(int deep, int i) const override;
-  bool find() const override;
-  void putIn(int deep, int i) override;
-  void moveOut(int deep, int i) override;
-
- private:
-  Vector9i &_vec;
-  Vector9i all_ans;
-  int _size = 9;
-  bool col_used[9];
-  bool block_used[9];
-};
+}  // namespace li

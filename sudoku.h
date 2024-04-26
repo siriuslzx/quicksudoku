@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Zhongxian Li
+ * Copyright (c) 2024 Zhongxian Li
  * quick sudoku is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -14,10 +14,11 @@
 
 #include "common.h"
 
-class sudoku {
+namespace li {
+class Sudoku {
  public:
-  sudoku();
-  ~sudoku();
+  Sudoku();
+  ~Sudoku();
 
   void newGame();
   bool getNum(int r, int c, int &num) const;
@@ -33,6 +34,7 @@ class sudoku {
 
  private:
   int _diff;
-  Matrix9i _mat;
-  Matrix9i _ans;
+  Array9i _board[10];
+  Array9i _ans;
 };
+}  // namespace li

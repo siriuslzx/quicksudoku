@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Zhongxian Li
+ * Copyright (c) 2024 Zhongxian Li
  * quick sudoku is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -14,17 +14,30 @@
 
 #include <Eigen/Core>
 
-using Matrix9i = Eigen::Matrix<int, 9, 9>;
-using Vector9i = Eigen::Matrix<int, 9, 1>;
+namespace li {
+using Array9i = Eigen::Array<int, 9, 9>;
 
-const int kDet = 4;
-const int kNotes = 0b1111111110;
-const int kNum = 0b1111;
+struct Point {
+  int r;
+  int c;
+};
 
-inline bool getBit(int n, int idx) { return (n >> idx) & 1; }
+struct Weight {
+  int r;
+  int c;
+  int w;
+  int hash;
+};
+bool operator<(const Weight &a, const Weight &b);
 
-inline void setBit(int &n, int idx) { n |= (1 << idx); }
+bool block_sum_0(const Array9i &arr);
+void init_note(Array9i board[]);
+int count_notes(int r, int c, const Array9i board[]);
+bool row_single(int &r, int &c, const Array9i &arr);
+bool col_single(int &r, int &c, const Array9i &arr);
+bool block_single(int &r, int &c, const Array9i &arr);
+bool get_single(int &r, int &c, int &num, const Array9i board[]);
+void set_num(int r, int c, int num, Array9i board[]);
+int fill_all_single(Array9i board[]);
 
-inline void unsetBit(int &n, int idx) { n &= ~(1 << idx); }
-
-inline void flipBit(int &n, int idx) { n ^= (1 << idx); }
+}  // namespace li
