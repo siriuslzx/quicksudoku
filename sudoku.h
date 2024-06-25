@@ -12,15 +12,16 @@
  */
 #pragma once
 
-#include "common.h"
+#include "config.h"
 
 namespace li {
+enum class Difficulty { easy = 1, medium, hard = 5 };
 class Sudoku {
  public:
   Sudoku();
   ~Sudoku();
 
-  void newGame();
+  int newGame(Difficulty dif);
   bool getNum(int r, int c, int &num) const;
   void setNum(int r, int c, int num);
   void flipNote(int r, int c, int num);
@@ -30,7 +31,7 @@ class Sudoku {
   bool circleRemove();
   bool assumeRemove();
 
-  int diff;
+  int getDiff() const { return _diff; }
 
  private:
   int _diff;

@@ -4,7 +4,7 @@ LD = g++
 Eigen3_DIR = /usr/include/eigen3
 CXXFLAGS =  -Wall -O2 -std=c++11 -I$(Eigen3_DIR)
 
-OBJ = common.o dfs.o sudoku.o
+OBJ = common.o dfs.o impl.o sudoku.o
 
 all: release test
 

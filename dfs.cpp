@@ -12,6 +12,8 @@
  */
 #include "dfs.h"
 
+#include "common.h"
+
 namespace li {
 void dfsGuess(DfsImpl &impl, int deep) {
   impl.getPos(deep);
@@ -34,7 +36,7 @@ void dfsDeduce(int R, int C, int num, const Array9i bd[], bool &isFind) {
     board[i] = bd[i];
   }
   set_num(R, C, num, board);
-  if (fill_all_single(board) < 0) {
+  if (fill_all_single(board, true) < 0) {
     isFind = false;
     return;
   }

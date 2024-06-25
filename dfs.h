@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include "common.h"
+#include "config.h"
 
 namespace li {
 class DfsImpl {

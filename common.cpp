@@ -16,7 +16,20 @@
 #include <tuple>
 
 namespace li {
+namespace {
+Array9i get_notes(const Array9i board[]) {
+  Array9i notes;
+  notes.fill(0);
+  for (int i = 9; i > 0; i--) {
+    notes += board[i];
+    notes *= 2;
+  }
+  return notes;
+}
+
 inline bool single_bit(int n) { return n > 0 && !(n & (n - 1)); }
+}  // namespace
+
 bool operator<(const Weight &a, const Weight &b) { return std::tie(a.w, a.hash) < std::tie(b.w, b.hash); }
 
 bool block_sum_0(const Array9i &arr) {
@@ -28,44 +41,6 @@ bool block_sum_0(const Array9i &arr) {
     }
   }
   return false;
-}
-
-void init_note(Array9i board[]) {
-  for (int i = 1; i < 10; i++) {
-    board[i].fill(1);
-  }
-  int t;
-  for (int i = 0; i < 9; i++)
-    for (int j = 0; j < 9; j++) {
-      t = board[0](i, j);
-      if (t > 0 && t < 10) {
-        board[t].col(j) = 0;
-        board[t].row(i) = 0;
-        board[t].block<3, 3>(i / 3 * 3, j / 3 * 3) = 0;
-        for (int k = 1; k < 10; k++) {
-          board[k](i, j) = 0;
-        }
-      }
-    }
-}
-
-int count_notes(int r, int c, const Array9i board[]) {
-  if (board[0](r, c) > 0) return 0;
-  int res = 0;
-  for (int i = 1; i < 10; ++i) {
-    res += board[i](r, c);
-  }
-  return res;
-}
-
-Array9i get_notes(const Array9i board[]) {
-  Array9i notes;
-  notes.fill(0);
-  for (int i = 9; i > 0; i--) {
-    notes += board[i];
-    notes *= 2;
-  }
-  return notes;
 }
 
 bool row_single(int &r, int &c, const Array9i &arr) {
@@ -109,6 +84,25 @@ bool block_single(int &r, int &c, const Array9i &arr) {
   return false;
 }
 
+void init_note(Array9i board[]) {
+  for (int i = 1; i < 10; i++) {
+    board[i].fill(1);
+  }
+  int t;
+  for (int i = 0; i < 9; i++)
+    for (int j = 0; j < 9; j++) {
+      t = board[0](i, j);
+      if (t > 0 && t < 10) {
+        board[t].col(j) = 0;
+        board[t].row(i) = 0;
+        board[t].block<3, 3>(i / 3 * 3, j / 3 * 3) = 0;
+        for (int k = 1; k < 10; k++) {
+          board[k](i, j) = 0;
+        }
+      }
+    }
+}
+
 bool get_single(int &r, int &c, int &num, const Array9i board[]) {
   for (int k = 1; k < 10; k++) {
     if (row_single(r, c, board[k]) || col_single(r, c, board[k]) || block_single(r, c, board[k])) {
@@ -140,16 +134,22 @@ void set_num(int r, int c, int num, Array9i board[]) {
   }
 }
 
-int fill_all_single(Array9i board[]) {
+int fill_all_single(Array9i board[], bool check) {
   int r, c, num;
-  while (get_single(r, c, num, board)) {
+  if (!get_single(r, c, num, board)) {
+    return 0;
+  }
+
+  for (; num > 0; get_single(r, c, num, board)) {
     do {
       set_num(r, c, num, board);
     } while (row_single(r, c, board[num]) || col_single(r, c, board[num]));
 
-    Array9i cur = board[num] + (board[0] == num).cast<int>();
-    if ((cur.colwise().sum() == 0).any() || (cur.rowwise().sum() == 0).any() || block_sum_0(cur)) {
-      return -1;
+    if (check) {
+      Array9i cur = board[num] + (board[0] == num).cast<int>();
+      if ((cur.colwise().sum() == 0).any() || (cur.rowwise().sum() == 0).any() || block_sum_0(cur)) {
+        return -1;
+      }
     }
   }
   return 1;

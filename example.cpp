@@ -5,7 +5,8 @@
 int main() {
   int num;
   li::Sudoku game;
-  game.newGame();
+  using li::Difficulty;
+  game.newGame(Difficulty::medium);
   for (int i = 0; i < 9; i++) {
     for (int j = 0; j < 9; j++) {
       if (game.getNum(i, j, num)) {

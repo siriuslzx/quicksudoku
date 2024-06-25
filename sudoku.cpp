@@ -18,121 +18,14 @@
 #include <numeric>
 #include <vector>
 
+#include "common.h"
 #include "dfs.h"
+#include "impl.h"
 
 namespace li {
 
-void col_swap_block(int &r, int &c) {
-  int a = r / 3;
-  int b = c / 3;
-  int d = r % 3;
-  int e = c % 3;
-  c = b * 3 + a;
-  r = e * 3 + d;
-}
-
-bool filter_notes(const Array9i board[], std::vector<Weight> &vec) {
-  vec.clear();
-  for (int i = 0; i < 9; i++) {
-    for (int j = 0; j < 9; j++) {
-      int n = board[0](i, j);
-      if (n <= 0) {
-        vec.push_back({i, j, count_notes(i, j, board), rand()});
-      }
-    }
-  }
-  return !vec.empty();
-}
-
-std::vector<Point> note_remove(const Array9i &asp, bool once, bool cons_block = true) {
-  std::vector<Point> vec;
-  Array9i cur;
-  int r, c;
-  for (int i = 0; i < 9; ++i) {
-    for (int j = 0; j < 9; ++j) {
-      if (asp(i, j) == 1) {
-        cur = asp;
-        r = i;
-        c = j;
-        do {
-          cur.col(c) = 0;
-          cur.row(r) = 0;
-          if (cons_block) {
-            cur.block<3, 3>(r / 3 * 3, c / 3 * 3) = 0;
-          }
-          cur(r, c) = 10;
-          if (once) break;
-        } while (row_single(r, c, cur) || col_single(r, c, cur) || (cons_block && block_single(r, c, cur)));
-
-        bool modify = false;
-        if (cons_block) {
-          modify |= block_sum_0(cur);
-        }
-
-        if ((cur.rowwise().sum() == 0).any() || (cur.colwise().sum() == 0).any() || modify) {
-          vec.push_back({i, j});
-        }
-      }
-    }
-  }
-  return vec;
-}
-
-bool _remove(Array9i board[], bool once) {
-  bool modify = false;
-  std::vector<Point> vec;
-  Array9i asp;
-  for (int n = 1; n < 10; n++) {
-    asp = (board[0] == n).cast<int>() * 10 + board[n];
-    vec = note_remove(asp, once);
-    if (!vec.empty()) modify = true;
-    for (auto &ele : vec) {
-      board[n](ele.r, ele.c) = 0;
-    }
-  }
-  return modify;
-}
-
-bool col_circle_remove(Array9i board[], void (*fun)(int &, int &) = nullptr) {
-  bool modify = false;
-  Array9i asp;
-  int r, c;
-  std::vector<Point> vec;
-  for (int tid = 0; tid < 9; ++tid) {
-    asp.fill(0);
-    for (int idx = 0; idx < 9; ++idx) {
-      // asp(i,j) == board_view[n](r, c) == board[n](R, C)
-      // i = idx, j = n-1
-      // r = idx, c = tid
-      // [R, C] = fun(r,c)
-      r = idx;
-      c = tid;
-      if (fun) fun(r, c);
-      if (board[0](r, c)) {
-        asp(idx, board[0](r, c) - 1) = 10;
-      } else {
-        for (int n = 1; n < 10; n++) {
-          if (board[n](r, c)) {
-            asp(idx, n - 1) = 1;
-          }
-        }
-      }
-    }
-    vec = note_remove(asp, false, false);
-    if (!vec.empty()) modify = true;
-    for (auto &ele : vec) {
-      r = ele.r;
-      c = tid;
-      if (fun) fun(r, c);
-      board[ele.c + 1](r, c) = 0;
-    }
-  }
-  return modify;
-}
-
 Sudoku::Sudoku() {
   srand(time(0));
-  diff = 1;
   _diff = 1;
 }
 
@@ -140,7 +33,7 @@ Sudoku::~Sudoku() {
   // dtor
 }
 
-void Sudoku::newGame() {
+int Sudoku::newGame(Difficulty dif) {
   _ans.fill(0);
   int a[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   int r, c, num;
@@ -155,7 +48,7 @@ void Sudoku::newGame() {
   Puzzle pu(_ans);
   dfsGuess(pu);
 
-  // create easy
+  // create origin
   std::vector<int> pool(81);
   std::vector<Weight> samp;
   std::iota(pool.begin(), pool.end(), 0);
@@ -186,49 +79,34 @@ void Sudoku::newGame() {
   }
 
   // create hard
-  for (int i = samp.size() - 1; i >= 0; i--) {
-    _board[0].fill(0);
-    for (auto &ele : samp) {
-      _board[0](ele.r, ele.c) = _ans(ele.r, ele.c);
-    }
-    int cur_r = samp[i].r;
-    int cur_c = samp[i].c;
-    _board[0](cur_r, cur_c) = 0;
-    init_note(_board);
-
-    for (int j = 1; j < 10; ++j)
-      if (_board[j](cur_r, cur_c) && j != _ans(cur_r, cur_c)) {
-        bool isFind = false;
-        dfsDeduce(cur_r, cur_c, j, _board, isFind);
-
-        if (isFind) {
-          samp[i].w = -1;
-          break;
-        }
-      }
-    if (samp[i].w > 0) {
-      samp.erase(samp.begin() + i);
-    }
+  switch (dif) {
+    case Difficulty::easy:
+      always_easy(samp, _ans);
+      break;
+    case Difficulty::medium:
+      often_medium(samp, _ans);
+      break;
+    case Difficulty::hard:
+      usually_hard(samp, _ans);
+      break;
   }
 
   // check diff
-  diff = 1;
   _board[0].fill(0);
-  for (auto ele : samp) {
+  for (auto &ele : samp) {
     _board[0](ele.r, ele.c) = _ans(ele.r, ele.c);
   }
   init_note(_board);
-
-  auto bak = _board[0];
   _diff = 1;
-  while (getSingle(r, c, num) || lineRemove() || circleRemove() || assumeRemove()) {
-    if (num) {
-      setNum(r, c, num);
+  if (dif != Difficulty::easy) {
+    auto bak = _board[0];
+    while (fill_all_single(_board) > 0 || lineRemove() || circleRemove() || assumeRemove()) {
     }
+    if (_board[0].minCoeff() <= 0) _diff = 5;
+    _board[0] = bak;
+    init_note(_board);
   }
-  diff = (_board[0].minCoeff() <= 0) ? 5 : _diff;
-  _board[0] = bak;
-  init_note(_board);
+  return _diff;
 }
 
 bool Sudoku::getNum(int r, int c, int &num) const {

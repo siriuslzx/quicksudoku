@@ -12,32 +12,19 @@
  */
 #pragma once
 
-#include <Eigen/Core>
+#include "config.h"
 
 namespace li {
-using Array9i = Eigen::Array<int, 9, 9>;
-
-struct Point {
-  int r;
-  int c;
-};
-
-struct Weight {
-  int r;
-  int c;
-  int w;
-  int hash;
-};
 bool operator<(const Weight &a, const Weight &b);
 
 bool block_sum_0(const Array9i &arr);
-void init_note(Array9i board[]);
-int count_notes(int r, int c, const Array9i board[]);
 bool row_single(int &r, int &c, const Array9i &arr);
 bool col_single(int &r, int &c, const Array9i &arr);
 bool block_single(int &r, int &c, const Array9i &arr);
+
+void init_note(Array9i board[]);
 bool get_single(int &r, int &c, int &num, const Array9i board[]);
 void set_num(int r, int c, int num, Array9i board[]);
-int fill_all_single(Array9i board[]);
+int fill_all_single(Array9i board[], bool check = false);
 
 }  // namespace li
